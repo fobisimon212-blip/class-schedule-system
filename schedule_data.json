@@ -1,0 +1,82 @@
+{
+  "Monday": {
+    "8:00-10:00am": {
+      "course": "Applied Electricity",
+      "room": "FF2",
+      "lecturer": "Mr.Alhassan"
+    },
+    "1:30-3:30pm": {
+      "course": "Linear Algebra",
+      "room": "CB2",
+      "lecturer": "Lec Lewis"
+    },
+    "3:30-5:30pm": {
+      "course": "Intro to Programming",
+      "room": "F1A1",
+      "lecturer": "Lec Umaru"
+    },
+    "7:00-9:00am": {
+      "course": "Communication Skills",
+      "room": "VLE",
+      "lecturer": "Lec Adjarko"
+    }
+  },
+  "Tuesday": {
+    "11:00am-1:00pm": {
+      "course": "Multimedia",
+      "room": "VLE",
+      "lecturer": "Adu Brempong"
+    },
+    "4:30-6:30pm": {
+      "course": "Communication Skills",
+      "room": "VLE",
+      "lecturer": "Mrs. Agyarko"
+    }
+  },
+  "Wednesday": {
+    "7:00-9:00am": {
+      "course": "Cloud Computing",
+      "room": "GF4",
+      "lecturer": "Lec.Mensah Sitti"
+    },
+    "9:00-11:00": {
+      "course": "Intro to Programming",
+      "room": "FF1",
+      "lecturer": "Lec.Umaru"
+    }
+  },
+  "Thursday": {
+    "8:00am-9:00am": {
+      "course": "French",
+      "room": "MC2",
+      "lecturer": "Lec Asengba"
+    },
+    "11:00am-1:00pm": {
+      "course": "Intro-Computer Technology",
+      "room": "F1A1",
+      "lecturer": "Lec.Sackey"
+    },
+    "3:30-5:30pm": {
+      "course": "Cloud Computing",
+      "room": "VLE",
+      "lecturer": "Lec Sitti"
+    }
+  },
+  "Friday": {
+    "7:00-9:00am": {
+      "course": "Applied Electricity",
+      "room": "F1A1",
+      "lecturer": "Lec Alhassan"
+    },
+    "11:00am-1:00pm": {
+      "course": "Multimedia",
+      "room": "FF1",
+      "lecturer": "Lec Desmond"
+    },
+    "3:30-5:30pm": {
+      "course": "Communication Skills",
+      "room": "VLE",
+      "lecturer": "Lec Adgyarko"
+    }
+  }
+}
