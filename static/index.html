@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ClassGrid — Schedule System</title>
+<link rel="stylesheet" href="decoratee.css">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0a0f1e;--bg2:#0f1628;--bg3:#162040;--card:#111827;
+  --border:#1e2d4a;--border2:#2a3f5f;
+  --ink:#e8edf7;--muted:#6b7fa3;--faint:#2a3550;
+  --accent:#4f9cf9;--accent2:#7c5cfc;--green:#2dd4bf;
+  --amber:#f59e0b;--red:#f43f5e;--pink:#ec4899;
+  --mon:#4f9cf9;--tue:#7c5cfc;--wed:#2dd4bf;--thu:#f59e0b;--fri:#f43f5e;
+  --r:10px;--font:'Syne',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden}
+
+/* ── NOISE OVERLAY ── */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ════════════════════════ LOGIN ════════════════════════ */
+#login-page{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  z-index:100;background:var(--bg);
+  background-image:radial-gradient(ellipse 60% 50% at 50% 0%, rgba(79,156,249,.12) 0%, transparent 70%);
+}
+.login-wrap{width:420px;animation:fadeUp .6s ease both}
+.login-logo{text-align:center;margin-bottom:2rem}
+.login-logo .mark{font-size:2.8rem;font-weight:800;letter-spacing:-2px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.login-logo .sub{font-family:var(--mono);font-size:.75rem;color:var(--muted);letter-spacing:.15em;margin-top:.25rem}
+.login-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2.5rem;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+.role-tabs{display:flex;gap:.5rem;margin-bottom:1.8rem;background:var(--bg2);border-radius:8px;padding:4px}
+.role-tab{flex:1;padding:.55rem;text-align:center;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:600;color:var(--muted);transition:all .2s;border:none;background:transparent;font-family:var(--font)}
+.role-tab.active{background:var(--bg3);color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.field{margin-bottom:1.2rem}
+.field label{display:block;font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.12em;margin-bottom:.45rem;text-transform:uppercase}
+.field input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem;color:var(--ink);font-family:var(--mono);font-size:.9rem;outline:none;transition:border-color .2s}
+.field input:focus{border-color:var(--accent)}
+.login-hint{font-family:var(--mono);font-size:.72rem;color:var(--muted);text-align:center;margin-bottom:1.2rem;line-height:1.6}
+.btn-login{width:100%;padding:.85rem;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:.95rem;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;letter-spacing:.03em}
+.btn-login:hover{opacity:.88}
+.btn-login:active{transform:scale(.98)}
+.login-err{color:var(--red);font-size:.8rem;font-family:var(--mono);text-align:center;margin-top:.8rem;min-height:1rem}
+
+/* ════════════════════════ APP SHELL ════════════════════════ */
+#app{display:none;min-height:100vh}
+
+/* ── TOPBAR ── */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.9rem 2rem;background:rgba(10,15,30,.85);
+  border-bottom:1px solid var(--border);backdrop-filter:blur(16px);
+}
+.topbar-brand{font-size:1.2rem;font-weight:800;letter-spacing:-1px;display:flex;align-items:center;gap:.6rem}
+.topbar-brand span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.topbar-right{display:flex;align-items:center;gap:1rem}
+.user-pill{display:flex;align-items:center;gap:.5rem;background:var(--bg3);border:1px solid var(--border);padding:.35rem .9rem .35rem .55rem;border-radius:20px;font-size:.82rem}
+.user-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.user-role{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.btn-logout{background:transparent;border:1px solid var(--border);color:var(--muted);padding:.35rem .9rem;border-radius:6px;cursor:pointer;font-size:.8rem;font-family:var(--font);transition:all .2s}
+.btn-logout:hover{border-color:var(--red);color:var(--red)}
+
+/* ── NAV TABS ── */
+.nav-strip{display:flex;gap:.25rem;padding:.75rem 2rem .5rem;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto}
+.nav-tab{padding:.5rem 1.1rem;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:600;color:var(--muted);border:none;background:transparent;font-family:var(--font);transition:all .2s;white-space:nowrap}
+.nav-tab:hover{color:var(--ink);background:var(--faint)}
+.nav-tab.active{background:var(--bg3);color:var(--ink);border-bottom:2px solid var(--accent)}
+
+/* ── MAIN CONTENT ── */
+.main{padding:2rem;max-width:1400px;margin:0 auto}
+.page{display:none;animation:fadeUp .35s ease both}
+.page.active{display:block}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem}
+.sec-hdr h2{font-size:1.6rem;font-weight:800;letter-spacing:-1px}
+.sec-hdr .tag{font-family:var(--mono);font-size:.72rem;color:var(--muted);background:var(--bg3);border:1px solid var(--border);padding:.2rem .7rem;border-radius:20px}
+
+/* ── TIMETABLE GRID ── */
+.tt-wrap{overflow-x:auto;padding-bottom:.5rem}
+.tt-grid{display:grid;grid-template-columns:110px repeat(5,1fr);gap:3px;min-width:780px}
+.tt-head-blank{background:var(--bg2);border-radius:var(--r);padding:.7rem}
+.tt-head{border-radius:var(--r);padding:.7rem 1rem;text-align:center;font-size:.8rem;font-weight:700;letter-spacing:.06em}
+.tt-head.mon{background:rgba(79,156,249,.15);color:var(--mon);border:1px solid rgba(79,156,249,.25)}
+.tt-head.tue{background:rgba(124,92,252,.15);color:var(--tue);border:1px solid rgba(124,92,252,.25)}
+.tt-head.wed{background:rgba(45,212,191,.15);color:var(--wed);border:1px solid rgba(45,212,191,.25)}
+.tt-head.thu{background:rgba(245,158,11,.15);color:var(--thu);border:1px solid rgba(245,158,11,.25)}
+.tt-head.fri{background:rgba(244,63,94,.15);color:var(--fri);border:1px solid rgba(244,63,94,.25)}
+
+.tt-time{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:.55rem .6rem;display:flex;align-items:center;justify-content:center;text-align:center;font-family:var(--mono);font-size:.68rem;color:var(--muted);line-height:1.4}
+.tt-cell{border-radius:var(--r);min-height:72px;background:var(--bg2);border:1px solid var(--border);transition:all .2s;cursor:default;position:relative;overflow:hidden}
+.tt-cell.filled{cursor:pointer}
+.tt-cell.filled:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:2}
+.tt-cell.filled::before{content:'';position:absolute;inset:0;opacity:.12;pointer-events:none}
+.tt-cell.mon-cell{border-color:rgba(79,156,249,.3)}.tt-cell.mon-cell::before{background:var(--mon)}
+.tt-cell.tue-cell{border-color:rgba(124,92,252,.3)}.tt-cell.tue-cell::before{background:var(--tue)}
+.tt-cell.wed-cell{border-color:rgba(45,212,191,.3)}.tt-cell.wed-cell::before{background:var(--wed)}
+.tt-cell.thu-cell{border-color:rgba(245,158,11,.3)}.tt-cell.thu-cell::before{background:var(--thu)}
+.tt-cell.fri-cell{border-color:rgba(244,63,94,.3)}.tt-cell.fri-cell::before{background:var(--red)}
+.tt-cell-inner{padding:.6rem .7rem;height:100%;display:flex;flex-direction:column;justify-content:center;gap:.2rem;position:relative;z-index:1}
+.tt-course{font-size:.75rem;font-weight:700;line-height:1.25}
+.tt-room{font-family:var(--mono);font-size:.65rem;color:var(--muted)}
+.tt-lect{font-family:var(--mono);font-size:.63rem;color:var(--muted);font-style:italic}
+.day-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:.3rem}
+
+/* ── STATS ROW ── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem 1.5rem;position:relative;overflow:hidden}
+.stat-card::after{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;opacity:.08}
+.stat-card.s-blue::after{background:var(--accent)}
+.stat-card.s-pur::after{background:var(--accent2)}
+.stat-card.s-grn::after{background:var(--green)}
+.stat-card.s-amb::after{background:var(--amber)}
+.stat-num{font-size:2rem;font-weight:800;letter-spacing:-2px;line-height:1}
+.stat-lbl{font-family:var(--mono);font-size:.7rem;color:var(--muted);margin-top:.35rem;letter-spacing:.08em}
+
+/* ── FORM ── */
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;max-width:560px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.form-group{display:flex;flex-direction:column;gap:.45rem}
+.form-group.full{grid-column:1/-1}
+.form-group label{font-family:var(--mono);font-size:.68rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.form-group select,.form-group input{
+  background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  padding:.65rem .9rem;color:var(--ink);font-family:var(--mono);font-size:.88rem;
+  outline:none;transition:border-color .2s;appearance:none;width:100%
+}
+.form-group select:focus,.form-group input:focus{border-color:var(--accent)}
+.form-group select option{background:var(--bg3)}
+.form-actions{display:flex;gap:.75rem;margin-top:1.5rem}
+.btn{padding:.65rem 1.4rem;border-radius:8px;border:none;cursor:pointer;font-family:var(--font);font-size:.88rem;font-weight:700;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-primary:hover{opacity:.85;transform:translateY(-1px)}
+.btn-danger{background:rgba(244,63,94,.15);border:1px solid rgba(244,63,94,.3);color:var(--red)}
+.btn-danger:hover{background:rgba(244,63,94,.25)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--accent2);color:var(--ink)}
+.form-msg{font-family:var(--mono);font-size:.78rem;margin-top:.9rem;min-height:1.1rem}
+.form-msg.ok{color:var(--green)}.form-msg.err{color:var(--red)}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:separate;border-spacing:0 3px}
+thead th{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:.7rem 1rem;background:var(--bg2);text-align:left}
+thead th:first-child{border-radius:8px 0 0 8px}
+thead th:last-child{border-radius:0 8px 8px 0}
+tbody tr{background:var(--card);transition:background .15s}
+tbody tr:hover{background:var(--bg3)}
+tbody td{padding:.75rem 1rem;font-size:.86rem;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+tbody td:first-child{border-left:1px solid var(--border);border-radius:8px 0 0 8px}
+tbody td:last-child{border-right:1px solid var(--border);border-radius:0 8px 8px 0}
+.day-badge{display:inline-flex;align-items:center;gap:.35rem;padding:.2rem .65rem;border-radius:20px;font-family:var(--mono);font-size:.72rem;font-weight:500}
+.day-badge.mon{background:rgba(79,156,249,.15);color:var(--mon)}
+.day-badge.tue{background:rgba(124,92,252,.15);color:var(--tue)}
+.day-badge.wed{background:rgba(45,212,191,.15);color:var(--wed)}
+.day-badge.thu{background:rgba(245,158,11,.15);color:var(--thu)}
+.day-badge.fri{background:rgba(244,63,94,.15);color:var(--red)}
+
+/* ── SEARCH RESULTS ── */
+.result-list{display:flex;flex-direction:column;gap:.75rem;margin-top:1.5rem}
+.result-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.4rem;display:flex;align-items:center;gap:1.5rem;transition:border-color .2s}
+.result-card:hover{border-color:var(--border2)}
+.result-card .rc-day{font-weight:800;font-size:1rem;min-width:90px}
+.result-card .rc-slot{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.result-card .rc-room{font-family:var(--mono);font-size:.78rem;color:var(--muted);margin-left:auto}
+.result-card .rc-lect{font-family:var(--mono);font-size:.75rem;color:var(--muted);font-style:italic}
+.no-result{font-family:var(--mono);color:var(--muted);font-size:.88rem;padding:2rem 0}
+
+/* ── COURSE LIST ── */
+.course-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:.5rem}
+.course-chip{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.4rem;display:flex;align-items:center;gap:.85rem;transition:all .2s}
+.course-chip:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.course-chip .cc-num{font-family:var(--mono);font-size:.72rem;color:var(--muted);min-width:22px}
+.course-chip .cc-name{font-size:.88rem;font-weight:600}
+.course-chip .cc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;width:min(480px,92vw);animation:fadeUp .25s ease}
+.modal h3{font-size:1.15rem;font-weight:800;margin-bottom:1.5rem}
+.modal-actions{display:flex;gap:.75rem;margin-top:1.5rem;justify-content:flex-end}
+
+/* ── EDIT ROW BTN ── */
+.edit-btn,.del-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:.3rem .7rem;cursor:pointer;font-size:.75rem;font-family:var(--font);font-weight:600;transition:all .2s}
+.edit-btn{color:var(--accent)}.edit-btn:hover{border-color:var(--accent);background:rgba(79,156,249,.08)}
+.del-btn{color:var(--red)}.del-btn:hover{border-color:var(--red);background:rgba(244,63,94,.08)}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<!-- ════ LOGIN ════ -->
+<div id="login-page">
+  <div class="login-wrap">
+    <div class="login-logo">
+      <div class="mark">Group 5 </div>
+      <div class="sub">SCHEDULE MANAGEMENT SYSTEM</div>
+    </div>
+    <div class="login-card">
+      <div class="role-tabs">
+        <button class="role-tab active" data-role="lecturer" onclick="setRole('lecturer',this)">Lecturer</button>
+        <button class="role-tab" data-role="student" onclick="setRole('student',this)">Student</button>
+      </div>
+      <div id="login-hint" class="login-hint">Password sample / 1234 &nbsp;·&nbsp; lecturer / pass123</div>
+      <div class="field">
+        <label>Username</label>
+        <input id="inp-user" type="text" placeholder="username" autocomplete="off"/>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="inp-pass" type="password" placeholder="••••••" onkeydown="if(e.key==='Enter')doLogin()"/>
+      </div>
+      <button class="btn-login" onclick="doLogin()">Sign In →</button>
+      <div class="login-err" id="login-err"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ APP ════ -->
+<div id="app">
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <span>GROUP 5 CLASS SCHEDULE SYSTEM</span>
+    </div>
+    <div class="topbar-right">
+      <div class="user-pill">
+        <span class="dot"></span>
+        <span id="disp-user">—</span>
+        <span class="user-role" id="disp-role">—</span>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Log out</button>
+    </div>
+  </header>
+
+  <!-- Nav -->
+  <nav class="nav-strip" id="nav-strip"></nav>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ── Timetable ── -->
+    <div id="page-timetable" class="page">
+      <div class="sec-hdr"><h2>Weekly Timetable</h2><span class="tag">Read only</span></div>
+      <div class="stats" id="stats-row"></div>
+      <div class="tt-wrap"><div class="tt-grid" id="tt-grid"></div></div>
+    </div>
+
+    <!-- ── Add Class ── -->
+    <div id="page-add" class="page">
+      <div class="sec-hdr"><h2>Add New Class</h2></div>
+      <div class="form-card">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Day</label>
+            <select id="add-day"></select>
+          </div>
+          <div class="form-group">
+            <label>Time Slot</label>
+            <select id="add-slot"></select>
+          </div>
+          <div class="form-group full">
+            <label>Course</label>
+            <select id="add-course"></select>
+          </div>
+          <div class="form-group">
+            <label>Room</label>
+            <select id="add-room"></select>
+          </div>
+          <div class="form-group">
+            <label>Lecturer Name</label>
+            <input id="add-lect" type="text" placeholder="e.g. Dr. Mensah"/>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="doAdd()">Add Class</button>
+        </div>
+        <div class="form-msg" id="add-msg"></div>
+      </div>
+    </div>
+
+    <!-- ── Manage / Edit / Delete ── -->
+    <div id="page-manage" class="page">
+      <div class="sec-hdr"><h2>Manage Schedule</h2><span class="tag" id="manage-count"></span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>Day</th><th>Time</th><th>Course</th><th>Room</th><th>Lecturer</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="manage-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Search (student) ── -->
+    <div id="page-search" class="page">
+      <div class="sec-hdr"><h2>Find a Course</h2></div>
+      <div class="form-card">
+        <div class="form-group">
+          <label>Select Course</label>
+          <select id="search-course"></select>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="doSearch()">Search</button>
+        </div>
+      </div>
+      <div class="result-list" id="search-results"></div>
+    </div>
+
+    <!-- ── Courses (student) ── -->
+    <div id="page-courses" class="page">
+      <div class="sec-hdr"><h2>All Courses</h2></div>
+      <div class="course-grid" id="course-grid"></div>
+    </div>
+
+    <!-- ── Today (student) ── -->
+    <div id="page-today" class="page">
+      <div class="sec-hdr"><h2>Today's Classes</h2><span class="tag" id="today-day"></span></div>
+      <div class="result-list" id="today-list"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Edit Modal ── -->
+<div class="modal-bg" id="edit-modal">
+  <div class="modal">
+    <h3>Edit Class</h3>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Course</label>
+        <select id="edit-course"></select>
+      </div>
+      <div class="form-group">
+        <label>Room</label>
+        <select id="edit-room"></select>
+      </div>
+      <div class="form-group">
+        <label>Lecturer</label>
+        <input id="edit-lect" type="text"/>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="doEdit()">Save Changes</button>
+    </div>
+    <div class="form-msg" id="edit-msg"></div>
+  </div>
+</div>
+
+<script>
+const DAY_CLS = {Monday:'mon',Tuesday:'tue',Wednesday:'wed',Thursday:'thu',Friday:'fri'};
+const DAY_COLORS = {Monday:'#4f9cf9',Tuesday:'#7c5cfc',Wednesday:'#2dd4bf',Thursday:'#f59e0b',Friday:'#f43f5e'};
+const COURSE_COLORS = ['#4f9cf9','#7c5cfc','#2dd4bf','#f59e0b','#f43f5e','#ec4899','#a78bfa','#34d399'];
+
+let STATE = {role:'',user:'',meta:{},schedule:{}};
+let editTarget = null;
+
+/* ── LOGIN ── */
+let selectedRole = 'lecturer';
+function setRole(r, el){
+  selectedRole = r;
+  document.querySelectorAll('.role-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('login-hint').innerHTML =
+    r==='lecturer' ? 'Demo → admin / 1234 &nbsp;·&nbsp; lecturer / pass123'
+                   : 'Demo → student1 / student &nbsp;·&nbsp; student2 / abc123';
+}
+
+async function doLogin(){
+  const u = document.getElementById('inp-user').value.trim();
+  const p = document.getElementById('inp-pass').value.trim();
+  const r = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p,role:selectedRole})});
+  if(r.ok){
+    const d = await r.json();
+    STATE.role = d.role; STATE.user = d.username;
+    document.getElementById('login-err').textContent='';
+    await initApp();
+  } else {
+    document.getElementById('login-err').textContent='Invalid credentials. Try again.';
+  }
+}
+document.getElementById('inp-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+
+function doLogout(){
+  STATE={role:'',user:'',meta:{},schedule:{}};
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-page').style.display='flex';
+  document.getElementById('inp-user').value='';
+  document.getElementById('inp-pass').value='';
+}
+
+/* ── INIT ── */
+async function initApp(){
+  const [meta, sched] = await Promise.all([
+    fetch('/api/meta').then(r=>r.json()),
+    fetch('/api/schedule').then(r=>r.json())
+  ]);
+  STATE.meta = meta; STATE.schedule = sched;
+
+  document.getElementById('disp-user').textContent = STATE.user;
+  document.getElementById('disp-role').textContent = STATE.role.toUpperCase();
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('app').style.display='block';
+
+  buildNav();
+  populateSelects();
+  buildTimetable();
+  buildStats();
+
+  if(STATE.role==='lecturer') buildManageTable();
+  else { buildCourseGrid(); buildToday(); }
+
+  showPage(STATE.role==='lecturer' ? 'timetable' : 'timetable');
+}
+
+/* ── NAV ── */
+const LECT_TABS = [
+  {id:'timetable',label:'📅 Timetable'},
+  {id:'add',label:'➕ Add Class'},
+  {id:'manage',label:'⚙️ Manage'},
+];
+const STU_TABS = [
+  {id:'timetable',label:'📅 Timetable'},
+  {id:'search',label:'🔍 Search'},
+  {id:'courses',label:'📚 Courses'},
+  {id:'today',label:'🗓 Today'},
+];
+
+function buildNav(){
+  const nav = document.getElementById('nav-strip');
+  nav.innerHTML='';
+  const tabs = STATE.role==='lecturer' ? LECT_TABS : STU_TABS;
+  tabs.forEach(t=>{
+    const b = document.createElement('button');
+    b.className='nav-tab'; b.dataset.page=t.id; b.textContent=t.label;
+    b.onclick=()=>showPage(t.id);
+    nav.appendChild(b);
+  });
+}
+
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b=>{
+    b.classList.toggle('active', b.dataset.page===id);
+  });
+  const pg = document.getElementById('page-'+id);
+  if(pg) pg.classList.add('active');
+  if(id==='manage') buildManageTable();
+  if(id==='timetable') buildTimetable();
+}
+
+/* ── SELECTS ── */
+function populateSelects(){
+  const {courses,days,slots,rooms} = STATE.meta;
+  fill('add-day',days); fill('add-slot',slots); fill('add-course',courses);
+  fill('add-room',rooms); fill('search-course',courses);
+  fill('edit-course',courses); fill('edit-room',rooms);
+}
+function fill(id,arr){
+  const s=document.getElementById(id); if(!s)return;
+  s.innerHTML=arr.map(v=>`<option value="${v}">${v}</option>`).join('');
+}
+
+/* ── STATS ── */
+function buildStats(){
+  const sched = STATE.schedule;
+  let total=0; const days={};
+  STATE.meta.days.forEach(d=>{days[d]=0});
+  for(const d of STATE.meta.days){
+    const c = Object.keys(sched[d]||{}).length;
+    days[d]=c; total+=c;
+  }
+  const busiest = Object.entries(days).sort((a,b)=>b[1]-a[1])[0];
+  const courses = new Set();
+  for(const d of Object.values(sched)) for(const e of Object.values(d)) courses.add(e.course);
+
+  document.getElementById('stats-row').innerHTML=`
+    <div class="stat-card s-blue"><div class="stat-num">${total}</div><div class="stat-lbl">TOTAL CLASSES</div></div>
+    <div class="stat-card s-grn"><div class="stat-num">${courses.size}</div><div class="stat-lbl">COURSES ACTIVE</div></div>
+    <div class="stat-card s-pur"><div class="stat-num">${busiest?busiest[1]:0}</div><div class="stat-lbl">BUSIEST DAY</div></div>
+    <div class="stat-card s-amb"><div class="stat-num">5</div><div class="stat-lbl">DAYS COVERED</div></div>
+  `;
+}
+
+/* ── TIMETABLE ── */
+function buildTimetable(){
+  const g = document.getElementById('tt-grid');
+  const {days,slots} = STATE.meta;
+  let html = '<div class="tt-head-blank"></div>';
+  days.forEach(d=>{ html+=`<div class="tt-head ${DAY_CLS[d]}">${d}</div>`; });
+  slots.forEach(slot=>{
+    html+=`<div class="tt-time">${slot.replace('–','<br>')}</div>`;
+    days.forEach(d=>{
+      const e = (STATE.schedule[d]||{})[slot];
+      if(e){
+        const dc = DAY_CLS[d];
+        html+=`<div class="tt-cell filled ${dc}-cell" onclick="showCellInfo('${d}','${slot}')">
+          <div class="tt-cell-inner">
+            <div class="tt-course"><span class="day-dot" style="background:${DAY_COLORS[d]}"></span>${e.course}</div>
+            <div class="tt-room">${e.room}</div>
+            <div class="tt-lect">${e.lecturer||''}</div>
+          </div>
+        </div>`;
+      } else {
+        html+=`<div class="tt-cell"></div>`;
+      }
+    });
+  });
+  g.innerHTML=html;
+}
+
+function showCellInfo(day,slot){
+  const e = (STATE.schedule[day]||{})[slot];
+  if(!e)return;
+  alert(`${day} · ${slot}\n\nCourse: ${e.course}\nRoom: ${e.room}\nLecturer: ${e.lecturer||'—'}`);
+}
+
+/* ── ADD CLASS ── */
+async function doAdd(){
+  const day=v('add-day'), slot=v('add-slot'), course=v('add-course'),
+        room=v('add-room'), lecturer=document.getElementById('add-lect').value.trim();
+  const msg=document.getElementById('add-msg');
+  msg.className='form-msg';
+  const r = await fetch('/api/schedule',{method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({day,slot,course,room,lecturer})
+  });
+  const d = await r.json();
+  if(d.ok){
+    STATE.schedule = await fetch('/api/schedule').then(r=>r.json());
+    buildTimetable(); buildStats();
+    msg.className='form-msg ok'; msg.textContent='✓ Class added successfully!';
+    setTimeout(()=>msg.textContent='',3000);
+  } else {
+    msg.className='form-msg err'; msg.textContent='✗ '+d.error;
+  }
+}
+
+/* ── MANAGE TABLE ── */
+function buildManageTable(){
+  const {days,slots} = STATE.meta;
+  const rows=[];
+  for(const d of days) for(const s of slots){
+    const e=(STATE.schedule[d]||{})[s];
+    if(e) rows.push({day:d,slot:s,...e});
+  }
+  document.getElementById('manage-count').textContent = rows.length+' classes';
+  document.getElementById('manage-body').innerHTML = rows.map(r=>`
+    <tr>
+      <td><span class="day-badge ${DAY_CLS[r.day]}">${r.day}</span></td>
+      <td style="font-family:var(--mono);font-size:.78rem">${r.slot}</td>
+      <td style="font-weight:600">${r.course}</td>
+      <td style="font-family:var(--mono);font-size:.8rem">${r.room}</td>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">${r.lecturer||'—'}</td>
+      <td style="display:flex;gap:.4rem">
+        <button class="edit-btn" onclick="openEdit('${r.day}','${r.slot}')">Edit</button>
+        <button class="del-btn" onclick="doDelete('${r.day}','${r.slot}')">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+/* ── EDIT MODAL ── */
+function openEdit(day,slot){
+  const e=(STATE.schedule[day]||{})[slot]; if(!e)return;
+  editTarget={day,slot};
+  document.getElementById('edit-course').value=e.course;
+  document.getElementById('edit-room').value=e.room;
+  document.getElementById('edit-lect').value=e.lecturer||'';
+  document.getElementById('edit-msg').textContent='';
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeModal(){ document.getElementById('edit-modal').classList.remove('open'); }
+
+async function doEdit(){
+  const {day,slot}=editTarget;
+  const course=v('edit-course'), room=v('edit-room'),
+        lecturer=document.getElementById('edit-lect').value.trim();
+  const r = await fetch(`/api/schedule/${day}/${encodeURIComponent(slot)}`,{
+    method:'PUT',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({course,room,lecturer})
+  });
+  if((await r.json()).ok){
+    STATE.schedule=await fetch('/api/schedule').then(r=>r.json());
+    buildTimetable(); buildStats(); buildManageTable();
+    closeModal();
+  }
+}
+
+async function doDelete(day,slot){
+  if(!confirm(`Remove class on ${day} at ${slot}?`))return;
+  await fetch(`/api/schedule/${day}/${encodeURIComponent(slot)}`,{method:'DELETE'});
+  STATE.schedule=await fetch('/api/schedule').then(r=>r.json());
+  buildTimetable(); buildStats(); buildManageTable();
+}
+
+/* ── SEARCH ── */
+function doSearch(){
+  const course = v('search-course');
+  const found=[];
+  for(const d of STATE.meta.days) for(const s of STATE.meta.slots){
+    const e=(STATE.schedule[d]||{})[s];
+    if(e&&e.course===course) found.push({day:d,slot:s,...e});
+  }
+  const el = document.getElementById('search-results');
+  if(!found.length){
+    el.innerHTML=`<div class="no-result">No sessions scheduled for "${course}".</div>`;
+    return;
+  }
+  el.innerHTML=found.map(f=>`
+    <div class="result-card">
+      <div>
+        <div class="rc-day" style="color:${DAY_COLORS[f.day]}">${f.day}</div>
+        <div class="rc-slot">${f.slot}</div>
+      </div>
+      <div>
+        <div style="font-size:.88rem;font-weight:600">${f.course}</div>
+        <div class="rc-lect">${f.lecturer||'—'}</div>
+      </div>
+      <div class="rc-room" style="margin-left:auto">${f.room}</div>
+    </div>`).join('');
+}
+
+/* ── COURSES ── */
+function buildCourseGrid(){
+  document.getElementById('course-grid').innerHTML = STATE.meta.courses.map((c,i)=>`
+    <div class="course-chip">
+      <span class="cc-num">${String(i+1).padStart(2,'0')}</span>
+      <span class="cc-dot" style="background:${COURSE_COLORS[i%COURSE_COLORS.length]}"></span>
+      <span class="cc-name">${c}</span>
+    </div>`).join('');
+}
+
+/* ── TODAY ── */
+function buildToday(){
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const today=days[new Date().getDay()];
+  document.getElementById('today-day').textContent=today;
+  const list=document.getElementById('today-list');
+  if(!STATE.meta.days.includes(today)){
+    list.innerHTML=`<div class="no-result">No classes today — enjoy your weekend! 🎉</div>`;
+    return;
+  }
+  const sessions=[];
+  for(const s of STATE.meta.slots){
+    const e=(STATE.schedule[today]||{})[s];
+    if(e) sessions.push({slot:s,...e});
+  }
+  if(!sessions.length){
+    list.innerHTML=`<div class="no-result">No classes scheduled for ${today}.</div>`;
+    return;
+  }
+  list.innerHTML=sessions.map(s=>`
+    <div class="result-card">
+      <div>
+        <div class="rc-day" style="color:${DAY_COLORS[today]}">${today}</div>
+        <div class="rc-slot">${s.slot}</div>
+      </div>
+      <div>
+        <div style="font-size:.9rem;font-weight:700">${s.course}</div>
+        <div class="rc-lect">${s.lecturer||'—'}</div>
+      </div>
+      <div class="rc-room">${s.room}</div>
+    </div>`).join('');
+}
+
+function v(id){ return document.getElementById(id).value; }
+</script>
+</body>
+</html>
